@@ -1,0 +1,46 @@
+name: Fuste weekly points email
+
+on:
+  schedule:
+    # Weekly Sunday 17:05 UTC (≈ 9:05am Pacific Standard Time; DST may shift)
+    - cron: "5 17 * * 0"
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install requests beautifulsoup4
+
+      # Restore cached state.json so we only email when there's a new post
+      - name: Restore state cache
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: fuste-state
+          restore-keys: |
+            fuste-state
+
+      - name: Run
+        run: python fuste_points_digest.py
+        env:
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+      # Save updated state.json back into cache
+      - name: Save state cache
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: fuste-state
